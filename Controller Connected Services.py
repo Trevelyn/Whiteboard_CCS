@@ -29,13 +29,16 @@ def authenticate_user(driver, username, password):
         
         # Wait for additional authentication if needed
         WebDriverWait(driver, 20).until(EC.url_contains("whiteboard.office.com"))
+
+        driver.refresh()
+
     except Exception as e:
         raise RuntimeError(f"Authentication failed for user {username}: {e}")
 
 def click_board_picker_settings(driver):
     """Click the boardPickerSettingsButton."""
     try:
-        button = WebDriverWait(driver, 10).until(
+        button = WebDriverWait(driver, 15).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, ".boardPickerSettingsButton"))
         )
         button.click()
@@ -46,31 +49,34 @@ def click_board_picker_settings(driver):
 def check_button_existence(driver, css_selector):
     """Verify if a button exists by its CSS selector."""
     try:
-        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, css_selector)))
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, css_selector)))
         return True
     except:
         return False
 
-def sign_out_user(driver):
-    """Sign out the current user with enhanced debugging."""
+def sign_out_and_restart(driver):
+    """Sign out the current user, close the browser, and restart it."""
     try:
-        # Ensure profile picture is interactable
-        profile_picture = WebDriverWait(driver, 10).until(
+        # Step 1: Open user menu by clicking the profile picture
+        profile_picture = WebDriverWait(driver, 20).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, ".\\_8ZYZKvxC8bvw1xgQGSkvvA\\=\\= > img"))
         )
         driver.execute_script("arguments[0].scrollIntoView(true);", profile_picture)
         profile_picture.click()
         time.sleep(2)  # Allow menu to open
         
-        # Click on sign-out button
+        # Step 2: Click on sign-out button
         sign_out_button = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.ID, "mectrl_body_signOut"))
         )
-        driver.execute_script("arguments[0].scrollIntoView(true);", sign_out_button)
         sign_out_button.click()
         time.sleep(5)  # Wait for the sign-out process to complete
+        
     except Exception as e:
         raise RuntimeError(f"Sign-out failed: {e}")
+    finally:
+        driver.quit()
+        return setup_driver()
 
 def test_privacy_and_security_button():
     """Test visibility of the privacy and security button for two users."""
@@ -83,7 +89,7 @@ def test_privacy_and_security_button():
         privacy_button_exists = check_button_existence(driver, ".privacyAndSecurityButton .ms-ContextualMenu-itemText")
         assert privacy_button_exists, "Privacy and Security button should be visible for User A."
         print("Test Passed: Privacy and Security button exists for User A.")
-        sign_out_user(driver)
+        driver = sign_out_and_restart(driver)
 
         # Test for User B
         print("Testing for User B...")
